@@ -3,12 +3,7 @@ import RNFS from 'react-native-fs';
 import moment from 'moment-jalaali';
 import {ToastAndroid} from 'react-native';
 
-const generateExcel = async (data = []) => {
-  let sample_data_to_export = [
-    {id: '1', name: 'First User'},
-    {id: '2', name: 'Second User'},
-  ];
-
+const generate = async data => {
   let wb = XLSX.utils.book_new();
   let ws = XLSX.utils.json_to_sheet(data);
   XLSX.utils.book_append_sheet(wb, ws, 'data');
@@ -25,7 +20,6 @@ const generateExcel = async (data = []) => {
   if (!(await RNFS.exists(directory()))) {
     RNFS.mkdir(directory()).catch(console.log);
   }
-
   RNFS.writeFile(`${directory()}/${Date.now()}.xlsx`, wbout, 'ascii')
     .then(r => {
       ToastAndroid.showWithGravity(
@@ -41,6 +35,37 @@ const generateExcel = async (data = []) => {
         ToastAndroid.BOTTOM,
       );
     });
+};
+
+const generateExcel = async (data = []) => {
+  const writePermission = PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE;
+  try {
+    let isPermitedWriteExternalStorage = await PermissionsAndroid.check(
+      writePermission,
+    );
+
+    if (!isPermitedWriteExternalStorage) {
+      const granted = await PermissionsAndroid.request(writePermission);
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        generate(data);
+      } else {
+        ToastAndroid.showWithGravity(
+          'Permission denied',
+          ToastAndroid.SHORT,
+          ToastAndroid.BOTTOM,
+        );
+      }
+    } else {
+      generate(data);
+    }
+  } catch (e) {
+    ToastAndroid.showWithGravity(
+      'Error while checking permission',
+      ToastAndroid.SHORT,
+      ToastAndroid.BOTTOM,
+    );
+    return;
+  }
 };
 
 export default generateExcel;
